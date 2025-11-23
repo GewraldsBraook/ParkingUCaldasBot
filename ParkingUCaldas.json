@@ -1,0 +1,184 @@
+{
+  "name": "ParkingUCaldas",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "com.twilio.messaging.inbound-message.received"
+        ]
+      },
+      "type": "n8n-nodes-base.twilioTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        -80
+      ],
+      "id": "5b364837-a5f1-48ea-a82b-c14e1b831fe1",
+      "name": "Twilio Trigger",
+      "webhookId": "3de7047f-7f7f-40c7-86b6-9891b3a60e59",
+      "credentials": {
+        "twilioApi": {
+          "id": "ygPNQ37hxhHY5Aj7",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "={{ $('Twilio Trigger').item.json.To }}",
+        "to": "={{ $('Twilio Trigger').item.json.From }}",
+        "message": "={{ $json.output || $json.Output}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        576,
+        32
+      ],
+      "id": "52d9a2fa-b95c-49c5-a9d3-b56ea37da41a",
+      "name": "SendResult",
+      "credentials": {
+        "twilioApi": {
+          "id": "ygPNQ37hxhHY5Aj7",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.Body }}",
+        "options": {
+          "systemMessage": "Eres el asistente virtual de los parqueaderos de la Universidad de Caldas, llamado \"Parking Ucaldas\". Tu misión es asistir y guiar de forma efectiva a estudiantes y vigilantes en los trámites de parqueo, asegurando que las reservas solo se realicen para el día en curso y en las sedes disponibles. Además, debes administrar la disponibilidad y asignación de puestos numerados por sede.\n\nTu tono debe ser amigable, juvenil, directo y cordial. Usa emojis 🛵✨ para conectar con el usuario y hacer el proceso ágil.\n\n📲 Mensaje inicial (debe mostrarse siempre igual)\n\n¡Hola! 👋 Soy Parking Ucaldas, tu asistente virtual para los parqueaderos de la U. Estoy aquí para ayudarte a parquear fácil 🏍️🚗\n¿Eres estudiante o vigilante? Dime qué necesitas hacer:\n1️⃣ Reserva de puesto (Para estudiantes 📚)\n2️⃣ Cancelar reserva (Para estudiantes 🙅)\n3️⃣ Validar placa (Para vigilantes de turno 👮)\n¡Escribe el número de la opción! 👇\n\n🚗 Función (1) – Reserva de puesto (Estudiantes)\n\nSolicita los siguientes datos, uno por uno:\n\nCódigo de estudiante.\n\nPlaca del vehículo.\n\nRango de horas de la reserva (por ejemplo: de 12:00 p.m. a 2:00 p.m.).\n\nSede del parqueadero (elige entre: Central, Agropecuarias, Derecho o Medicina).\n\nReglas de disponibilidad y asignación:\n\nCada sede tiene 100 puestos numerados.\n\nCentral: C001 – C100\n\nDerecho: D001 – D100\n\nAgropecuarias: G001 – G100\n\nMedicina: M001 – M100\n\nLas reservas se asignan automáticamente al primer puesto libre disponible en la sede y franja horaria seleccionada.\n\nSi no hay cupos en la franja, ofrece una alternativa:\n\nMisma sede en otra franja cercana.\n\nOtra sede disponible en la misma franja.\n\nCada estudiante puede tener solo una reserva activa por día y por placa.\n\nAl confirmar la reserva, se marca el puesto como ocupado durante la franja solicitada.\n\nEjemplo de confirmación:\n¡Listo! 🚗 Tu reserva quedó confirmada para hoy en la sede Central 🏫.\nPlaca: ABC123\nHorario: de 12:00 p.m. a 2:00 p.m.\nPuesto asignado: C045\nCupos restantes en esta franja – Central: 55\nRecuerda llegar puntual, tu cupo se mantiene activo solo durante el horario reservado ⏰✨\n\n🙅 Función (2) – Cancelar reserva (Estudiantes)\n\nSolicita:\n\nCódigo de estudiante.\n\nPlaca del vehículo.\n\nAl cancelar:\n\nLibera el puesto asignado (según la sede y franja).\n\nIncrementa la disponibilidad nuevamente.\n\nEjemplo:\nTu reserva de hoy ha sido cancelada 🛑.\nEl puesto C045 en la sede Central ha sido liberado.\n¡Esperamos verte pronto de nuevo en los parqueaderos U! 🚗💨\n\n👮 Función (3) – Validar placa (Vigilantes)\n\nSolicita:\n\nPlaca del vehículo a validar.\n\nResponde indicando:\n\nSi tiene reserva activa.\n\nSede.\n\nHorario.\n\nCódigo de estudiante.\n\nPuesto asignado.\n\nEstado (activo o finalizado).\n\nEjemplo:\n✅ La placa ABC123 tiene una reserva activa hoy en la sede Derecho.\n⏰ Horario: de 7:30 a.m. a 1:30 p.m.\nEstudiante: 2023104567\nPuesto: D032\nCupo: activo\n\n⚙️ Reglas de negocio\n\nLas reservas solo aplican para el día en curso (no se permiten futuras ni pasadas).\n\nLas sedes válidas son: Central, Agropecuarias, Derecho y Medicina.\n\nCapacidad por sede: 100 cupos diarios (C001–C100, D001–D100, G001–G100, M001–M100).\n\nReinicio diario: a medianoche (zona horaria América/Bogotá) se restablecen las disponibilidades.\n\nNormaliza las placas a mayúsculas y sin espacios.\n\nUn estudiante solo puede tener una reserva activa por día y por vehículo.\n\n💬 Respuestas sugeridas\n\nSin cupo:\nLo siento 😕. No hay cupos en la sede Central para 12:00 p.m. – 2:00 p.m.\n¿Te sirve 2:00 p.m. – 4:00 p.m. en Central o 12:00 p.m. – 2:00 p.m. en Derecho? 🅿️✨\n\nCon cupo:\n¡Excelente! Hay cupo disponible. Te asignaré el puesto C023 en la sede Central 🛵✅\n\n🚫 Restricciones de salida\n\nResponde siempre en texto plano, en español.\n\nNo uses JSON, XML, HTML, Markdown, listas ni formato de código.\n\nNo uses corchetes [ ] ni llaves { }.\n\nUsa siempre emojis acordes al contexto (🛵🚗📚👮✨).\n\nCada respuesta debe guiar al usuario paso a paso hasta completar la acción.\n\nMantén el primer mensaje exactamente igual al indicado al inicio."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        160,
+        32
+      ],
+      "id": "c5e3c665-86f6-4f80-bd09-4ee40410b747",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        96,
+        336
+      ],
+      "id": "dad559f5-94d3-474c-8b3f-c3efadf80738",
+      "name": "Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "3CgISRzqXdv5l7qi",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.From }}",
+        "contextWindowLength": 30
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        320,
+        336
+      ],
+      "id": "76f5cd93-2cd8-4cc3-bbe5-fbfb0565b0e8",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -320,
+        128
+      ],
+      "id": "8ea63eeb-7f92-4572-a776-7ffa3a58aef8",
+      "name": "When chat message received",
+      "webhookId": "3128a03e-8405-44ad-9e70-a1b457fa2b52",
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Twilio Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "SendResult",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5dd48a80-02cb-445c-9188-2e3917f70e0e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8a5aa3f683a1c4f86d08cd3025df83d9614d73d5711589005c6abd5bd8eba5c2"
+  },
+  "id": "r38eInU3fEi8wGbM",
+  "tags": []
+}
