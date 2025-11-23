@@ -1,100 +1,245 @@
-# ParkingUCaldasBot
+# Parking Ucaldas – Asistente virtual de parqueaderos
 
-## 🤖 Manual Funcional del Prompt para Chatbot de WhatsApp (n8n)
+### n8n + Twilio + Google Gemini + VPS Hostinger (Docker)
 
-Este manual describe el propósito, los parámetros, el comportamiento esperado y la integración del **prompt principal** que define la personalidad y las reglas del chatbot.
+Este repositorio contiene el flujo de automatización del asistente **Parking Ucaldas**, un chatbot que administra reservas de parqueaderos para estudiantes y vigilantes de la **Universidad de Caldas**, operando sobre:
 
----
-
-### 1. 🎯 Objetivo del Prompt
-
-El objetivo principal de este prompt es establecer el **rol, tono y las restricciones** del chatbot para asegurar una interacción consistente, útil y dentro de los límites de la integración con n8n y WhatsApp.
-
-### 2. 📝 Estructura del Prompt (Componentes Clave)
-
-El prompt está compuesto por varias secciones que deben ser claras y jerárquicas:
-
-| Sección | Descripción | Contenido Típico |
-| :--- | :--- | :--- |
-| **A. Identidad y Rol** | Define quién es el chatbot y cuál es su trabajo principal. | "Eres un Asistente Virtual amable y profesional para [Nombre de la Empresa]. Tu tarea es responder preguntas frecuentes sobre [Producto/Servicio] y guiar al usuario a la sección de [Acción Principal, e.g., Compras]." |
-| **B. Reglas y Restricciones** | Las directrices más importantes que el modelo **no debe** romper (límites de contexto, longitud, etc.). | *No* inventes información. Si no tienes la respuesta, pide disculpas y sugiere una alternativa. *Nunca* uses emojis que no sean [Lista de emojis permitidos]. Mantén las respuestas por debajo de [Número] palabras. |
-| **C. Contexto o Información Fuente** | La base de conocimiento con la que debe trabajar el chatbot (puede ser insertada dinámicamente). | "La empresa ofrece tres planes: Básico (\$10), Premium (\$25), y Empresarial (\$50). El soporte es de Lunes a Viernes." |
-| **D. Formato de Salida (Output Format)** | La estructura que el chatbot debe seguir para que n8n pueda procesar la respuesta o para mejorar la legibilidad en WhatsApp. | Responde siempre con un título en **negritas** y luego la respuesta en párrafos cortos. |
-
-### 3. ⚙️ Integración con n8n (Flujo Funcional)
-
-El prompt interactúa con el flujo de n8n en las siguientes fases:
-
-#### 3.1. Nodo de Entrada (Webhook/WhatsApp Trigger)
-
-* **Función:** Recibe el mensaje (`user_message`) del usuario.
-* **n8n Acción:** Este mensaje se almacena en una variable, por ejemplo, `${{$json.body.message.text}}`.
-
-#### 3.2. Nodo de Pre-Procesamiento (Code/Function)
-
-* **Función:** Se utiliza para **construir el prompt final** concatenando las secciones estáticas (A, B, D) con el contexto dinámico (C) y el mensaje del usuario.
-* **Variable de Salida Clave:** `final_prompt` (Contiene la instrucción completa para el LLM).
-
-$$\text{final\_prompt} = \text{Identidad} + \text{Reglas} + \text{Contexto Dinámico} + \text{"Usuario pregunta: "} + \text{user\_message}$$
-
-#### 3.3. Nodo de LLM (AI/OpenAI/Custom Model)
-
-* **Función:** Envía el `final_prompt` al modelo de lenguaje (LLM).
-* **Parámetros Clave:**
-    * **Input:** `final_prompt`
-    * **Temperatura:** (Suele ser baja, $T \approx 0.2$ para un comportamiento más predecible y fáctico).
-    * **Modelo:** (e.g., `gpt-3.5-turbo`, `gpt-4`).
-
-#### 3.4. Nodo de Post-Procesamiento (Code/Function - Opcional)
-
-* **Función:** Validar y limpiar la respuesta del LLM antes de enviarla.
-    * *Ejemplo:* Recortar la respuesta si supera un límite de caracteres específico de WhatsApp, o añadir un `[Enviado por bot]` para trazabilidad.
-
-#### 3.5. Nodo de Salida (WhatsApp Send Message)
-
-* **Función:** Envía la respuesta final al usuario.
-* **Input:** La respuesta generada por el LLM.
-
-### 4. ⚠️ Casos Límite y Manejo de Errores
-
-Para que el prompt sea robusto, debe anticipar fallas:
-
-| Evento | Instrucción en el Prompt (Sección B) | n8n Manejo de Errores |
-| :--- | :--- | :--- |
-| **Consulta Irrelevante** | "Si la pregunta no tiene relación con nuestros productos/servicios, responde cortésmente que solo puedes ayudar con temas de [Dominio]." | Uso de un nodo **IF** que detecte palabras clave (`gracias`, `adiós`) para terminar el flujo sin llamar al LLM, ahorrando coste. |
-| **Contexto Agotado** | "Si la respuesta requiere información no proporcionada en el contexto, *debes* responder: 'Lo siento, no tengo esa información. ¿Deseas hablar con un agente?'" | El LLM debe generar este texto, que luego puede disparar un nuevo flujo en n8n para notificar a un humano. |
-| **Fallo del LLM** | (No aplicable al prompt, es un error técnico) | **Error Handling Branch** en n8n: Si el nodo de LLM falla, el flujo debe saltar a un nodo que envíe un mensaje genérico: "Estamos teniendo problemas técnicos. Por favor, inténtalo más tarde." |
+* **n8n** corriendo en un **contenedor Docker**
+* Desplegado en un **VPS de Hostinger**
+* Integrado con **Twilio** para WhatsApp/SMS
+* Impulsado por **Google Gemini** para inteligencia conversacional
 
 ---
 
-### 5. ✅ Recomendaciones de Optimización
+# 🚀 1. Infraestructura General
 
-* **Prompt Cero (System Role):** Utiliza la función de "System Role" si tu LLM lo permite para las secciones A y B. Esto asegura que el modelo **siempre** mantiene la personalidad.
-* **Longitud de Contexto:** Monitorea el uso de tokens. Si el contexto (Sección C) crece mucho, considera usar una base de datos vectorial (como Pinecone o Weaviate) integrada con n8n para hacer una búsqueda semántica *antes* de construir el `final_prompt` (RAG - Retrieval-Augmented Generation).
+Parking Ucaldas se ejecuta en un entorno de producción estable compuesto por:
+
+### **✔️ VPS Hostinger**
+
+* Sistema operativo: Ubuntu 22.04 (recomendado)
+* n8n desplegado usando **Docker + Docker Compose**
+* Puerto de n8n expuesto (generalmente 5678)
+* Certificado SSL opcional con Cloudflare o Let’s Encrypt
+
+### **✔️ Docker**
+
+El sistema se ejecuta aislado en un contenedor:
+
+Ejemplo típico del `docker-compose.yml` usado:
+
+```
+version: '3.3'
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: always
+    ports:
+      - 5678:5678
+    volumes:
+      - ~/.n8n:/home/node/.n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=superpassword
+      - WEBHOOK_TUNNEL_URL=https://tudominio.com
+```
+
+### **✔️ Twilio Webhooks**
+
+Twilio redirige los mensajes entrantes hacia el webhook HTTPS del VPS.
+
+### **✔️ n8n → Gemini Integration**
+
+El flujo usa el nodo oficial de LangChain para comunicarse con **Google Gemini (PaLM API)**.
 
 ---
 
-¡Excelente ajuste! Al especificar el modelo (**Gemini 2.5 Flash**), podemos refinar la terminología del manual para que refleje mejor la configuración de Google AI, especialmente en lo que respecta al "System Instruction" y la gestión de la conversación.
+# 🧩 2. Arquitectura del Sistema (Diagrama)
 
-Aquí está el manual funcional actualizado en formato Markdown para GitHub, sustituyendo las referencias genéricas de LLM por la terminología de Gemini:
+```
+┌─────────────────┐      WhatsApp/SMS       ┌─────────────────────┐
+│     Usuario      │ ─────────────────────▶ │       Twilio        │
+└─────────────────┘                         └─────────┬───────────┘
+                                                      │ Webhook
+                                                      ▼
+                                           ┌──────────────────────┐
+                                           │   VPS Hostinger       │
+                                           │ (Docker + n8n stack)  │
+                                           └─────────┬────────────┘
+                                                     │
+                                                     ▼
+                                          ┌────────────────────────┐
+                                          │  n8n Workflow:          │
+                                          │  Parking Ucaldas Bot    │
+                                          ├────────────────────────┤
+                                          │ Twilio Trigger          │
+                                          │ LangChain Agent         │
+                                          │ Gemini Chat Model       │
+                                          │ Session Memory          │
+                                          │ Twilio Sender           │
+                                          └─────────┬──────────────┘
+                                                    │
+                                                    ▼
+                                          ┌─────────────────────────┐
+                                          │ Google Gemini (PaLM API)│
+                                          └─────────────────────────┘
+```
 
 ---
 
-## 4. 🚀 Optimización Específica para Gemini
+# 🔄 3. Diagrama del Flujo Conversacional
 
-### 4.1. Eficiencia con 2.5 Flash
-El modelo `gemini-2.5-flash` está optimizado para velocidad y coste, lo que lo hace ideal para flujos de chat en tiempo real como WhatsApp.
+```
+               ┌──────────────────┐
+               │   Usuario         │
+               └───────┬──────────┘
+                       ▼
+           ┌──────────────────────────┐
+           │ Twilio Trigger (n8n)     │
+           └───────┬──────────────────┘
+                   ▼
+      ┌──────────────────────────────┐
+      │ LangChain AI Agent           │
+      │ (con el mega prompt)         │
+      └─────────┬────────────────────┘
+                ▼
+   ┌──────────────────────────────┐
+   │ 1️⃣ Reserva                  │
+   | 2️⃣ Cancelar                 │
+   | 3️⃣ Validar placa            │
+   └─────────┬────────────────────┘
+             ▼
+  ┌─────────────────────────────────┐
+  │ Gemini: Genera la respuesta     │
+  └─────────┬──────────────────────┘
+            ▼
+   ┌──────────────────────────────┐
+   │  SendResult (Twilio Out)     │
+   └─────────┬────────────────────┘
+             ▼
+       ┌─────────────┐
+       │   Usuario    │
+       └─────────────┘
+```
 
-* **Aprovecha la Ventana de Contexto:** 2.5 Flash tiene una ventana de contexto grande. Si el chat es conversacional, puedes inyectar los **últimos 3 pares de mensajes** como historial en el *Content* de la API para mantener la coherencia sin necesidad de una lógica de estado compleja.
+---
 
-### 4.2. Inyección de Contexto (RAG)
-Para bases de conocimiento extensas, se sigue recomendando el patrón RAG (Retrieval-Augmented Generation) para mantener el costo y la latencia bajos:
+# 📦 4. Estructura del Repositorio
 
-1.  **Búsqueda:** El `user_message` se usa para buscar los fragmentos de contexto más relevantes.
-2.  **Inyección:** Estos fragmentos se añaden a la **Sección C** (Contexto) de la llamada, justo antes de la pregunta del usuario.
+```
+/
+├── ParkingUCaldas.json   → Flow completo exportado de n8n
+├── README.md             → Este documento
+└── docs/
+    ├── arquitectura.png  → Diagrama sugerido
+    ├── flujo.png
+```
 
-> **Formato de Contenido Sugerido:**
-> `[CONTEXTO RELEVANTE]: [Fragmento 1]; [Fragmento 2].`
-> `USUARIO PREGUNTA: [user_message]`
+*Los diagramas puedes generarlos desde acá mismo si quieres que te los exporte como PNG.*
 
+---
+
+# ⚙️ 5. Configuración Detallada
+
+### **n8n en Docker dentro de Hostinger**
+
+Ventajas:
+
+* Reinicio automático
+* Aislamiento
+* Fácil actualización de versiones
+* Persistencia garantizada con bind volumes
+
+### **Webhooks**
+
+Asegura que:
+
+* El VPS tenga dominio o subdominio apuntado
+* El puerto 443 esté abierto
+* Twilio pueda llegar al webhook
+
+---
+
+# 📡 6. Configuración de Twilio
+
+Tu número de Twilio debe tener configurado:
+
+* **Webhook de mensajes entrantes** (WhatsApp o SMS)
+  → apuntando al webhook del nodo **Twilio Trigger**.
+
+Ejemplo:
+
+```
+https://tudominio.com/webhook/3de7047f-7f7f-40c7-86b6-9891b3a60e59
+```
+
+---
+
+# 🤖 7. Lógica del Bot (Reglas Clave)
+
+Ya incluidas previamente en detalle:
+
+* Mensaje inicial fijo
+* Flujo guiado paso a paso
+* Sedes con 100 cupos cada una
+* Prefijos: C, D, G, M
+* No memorias cross-day
+* Reinicio diario automático
+* Sin JSON/llaves/corchetes en salida
+
+> OJO: El flujo actual **no tiene base de datos**, toda la lógica de disponibilidad la maneja Gemini según el prompt.
+> Si quieres persistencia real, te la puedo montar con Supabase o MySQL.
+
+---
+
+# 📈 8. Monitoreo y Logs
+
+### **n8n UI**
+
+* Panel "Executions"
+* Filtrar por error
+* Ver entradas/salidas de cada nodo
+
+### **Docker logs**
+
+```
+docker logs -f n8n
+```
+
+### **Hostinger VPS**
+
+Opciones adicionales:
+
+* Monitor de procesos (htop)
+* Firewall UFW
+* Fail2ban opcional
+
+---
+
+# 🚀 9. Despliegue / Actualización Rápida
+
+Actualizar n8n:
+
+```
+docker pull n8nio/n8n:latest
+docker compose down
+docker compose up -d
+```
+
+El flujo funciona igual porque todo vive en:
+
+```
+~/.n8n
+```
+
+---
+
+# 🙋 Autor / Créditos
+
+Proyecto implementado y desplegado por:
+
+**Gewralds Braook**
+Software Developer (.NET) – Apasionado por el desarrollo
+Basado en infraestructura propia con Docker + VPS Hostinger
 ---
