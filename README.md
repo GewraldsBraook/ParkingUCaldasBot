@@ -232,6 +232,6 @@ Recibe placa y responde con:
 
 # 👨‍💻 Autor
 
-**Gewralds Betancourt**
+**Gewralds Braook**
 Software Developer (.NET) · IA Enthusiast
 Infraestructura: Docker + n8n + Twilio + Gemini + Hostinger
