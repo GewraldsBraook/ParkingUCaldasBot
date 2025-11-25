@@ -1,4 +1,4 @@
-# 🚗 Parking Ucaldas
+# 🚗 Parking UCaldas
 
 ### Asistente Virtual para Reservas de Parqueaderos
 
@@ -9,7 +9,7 @@ El sistema automatiza la interacción entre estudiantes y vigilantes, utilizando
 
 ---
 
-## ✨ ¿Qué hace Parking Ucaldas?
+## ✨ ¿Qué hace Parking UCaldas?
 
 👨‍🎓 **Estudiantes**
 
@@ -19,7 +19,6 @@ El sistema automatiza la interacción entre estudiantes y vigilantes, utilizando
 👮 **Vigilantes**
 
 * Validar placa
-* Confirmar si un vehículo tiene reserva activa
 
 ---
 
