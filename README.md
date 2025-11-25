@@ -1,28 +1,44 @@
-# Parking Ucaldas – Asistente virtual de parqueaderos
+# 🚗 Parking Ucaldas
 
-### n8n + Twilio + Google Gemini + Docker en VPS Hostinger
+### Asistente Virtual para Reservas de Parqueaderos
 
-Este repositorio contiene el flujo de automatización de **Parking Ucaldas**, el asistente virtual de los parqueaderos de la **Universidad de Caldas**, implementado en **n8n**, ejecutado dentro de un **contenedor Docker** en un **VPS de Hostinger**, integrado con **Twilio** y potenciado por **Google Gemini**.
+**n8n + Twilio + Google Gemini + Docker en VPS Hostinger**
 
-Parking Ucaldas permite:
-
-* Realizar **reservas de puestos** (Estudiantes 📚)
-* **Cancelar reservas** (Estudiantes 🙅)
-* **Validar placas** (Vigilantes 👮)
-
-La interacción se da vía **WhatsApp/SMS** usando Twilio, y la lógica de conversación está controlada por un **AI Agent** con **Gemini**, usando memoria por sesión.
+Parking UCaldas es un asistente virtual inteligente que permite realizar reservas de parqueaderos en la **Universidad de Caldas** mediante WhatsApp.
+El sistema automatiza la interacción entre estudiantes y vigilantes, utilizando **IA conversacional, automatización y contenedores Docker**.
 
 ---
 
-# 1. Funcionalidad General
+## ✨ ¿Qué hace Parking Ucaldas?
 
-El asistente guía a estudiantes y vigilantes según la opción seleccionada:
+👨‍🎓 **Estudiantes**
 
-1️⃣ **Reserva de puesto**
-2️⃣ **Cancelar reserva**
-3️⃣ **Validar placa**
+* Reservar puesto
+* Cancelar reserva
 
-El mensaje inicial SIEMPRE es:
+👮 **Vigilantes**
+
+* Validar placa
+* Confirmar si un vehículo tiene reserva activa
+
+---
+
+## 🚀 Tecnologías Principales
+
+* **n8n** → Motor de automatización del flujo
+* **Twilio** → Entrada/salida de mensajes (WhatsApp / SMS)
+* **Google Gemini** → Modelo de IA responsable de la conversación
+* **LangChain** → Framework del agente conversacional
+* **Docker** → Contenedor para n8n en producción
+* **Hostinger VPS** → Infraestructura del sistema
+
+---
+
+## 🔧 Funcionamiento General
+
+El usuario envía un mensaje por WhatsApp/SMS. Twilio lo envía al webhook de **n8n**, donde un **AI Agent** con Gemini procesa el mensaje, sigue las reglas del flujo y responde nuevamente vía Twilio.
+
+### 👋 Mensaje inicial (siempre):
 
 ```
 ¡Hola! 👋 Soy Parking Ucaldas, tu asistente virtual para los parqueaderos de la U. Estoy aquí para ayudarte a parquear fácil 🏍️🚗
@@ -33,130 +49,86 @@ El mensaje inicial SIEMPRE es:
 ¡Escribe el número de la opción! 👇
 ```
 
-### Sedes y cupos
+---
 
-Cada sede tiene **100 puestos**, con prefijo:
+## 🗺️ Sedes y Cupos
 
-* Central → C001 – C100
-* Derecho → D001 – D100
-* Agropecuarias → G001 – G100
-* Medicina → M001 – M100
+Cada sede tiene **100 puestos** con códigos únicos:
 
-### Reglas principales
-
-* Reservas **solo para el día actual**
-* Cada estudiante solo puede tener **una reserva activa por día**
-* Reinicio diario **00:00 América/Bogotá**
-* Placas normalizadas a **mayúsculas + sin espacios**
-* Respuestas **solo en texto plano**, sin JSON, sin listas, sin llaves, sin corchetes
+| Sede             | Rango       |
+| ---------------- | ----------- |
+| 🟦 Central       | C001 – C100 |
+| 🟩 Derecho       | D001 – D100 |
+| 🟧 Agropecuarias | G001 – G100 |
+| 🟥 Medicina      | M001 – M100 |
 
 ---
 
-# 2. Arquitectura del Sistema
+## 📌 Reglas del Sistema
 
-Parking Ucaldas está desplegado sobre:
+* Reservas **solo para hoy**
+* 1 reserva activa por estudiante
+* Reinicio automático: **00:00 (América/Bogotá)**
+* Placas normalizadas
+* Respuestas en **texto plano** (sin JSON ni listas técnicas)
 
-### ✔️ VPS Hostinger
+---
 
-* Ubuntu 22.04 recomendado
+# 🏗️ Arquitectura del Sistema
+
+```
+Usuario (WhatsApp/SMS)
+        │
+        ▼
+      Twilio
+        │ Webhook
+        ▼
++-----------------------------+
+|    VPS Hostinger (Docker)   |
+|     └── n8n Workflow        |
+|         ├ Twilio Trigger    |
+|         ├ LangChain Agent   |
+|         ├ Gemini Model      |
+|         └ Twilio Response   |
++-----------------------------+
+        │
+        ▼
+   Google Gemini
+```
+
+---
+
+## 💬 Flujo Conversacional
+
+```
+Usuario → Twilio → n8n (AI Agent) → Gemini → n8n → Twilio → Usuario
+```
+
+Memoria por sesión → `From`
+Contexto de hasta **30 mensajes**.
+
+---
+
+# ⚙️ Instalación y Despliegue
+
+## 1️⃣ Requisitos
+
+* VPS con Ubuntu 22.04
 * Docker + Docker Compose
-* n8n corriendo como servicio
-* Webhook público HTTPS para Twilio
-
-### ✔️ Docker
-
-El contenedor ejecuta n8n con persistencia en:
-
-```
-~/.n8n
-```
-
-### ✔️ Twilio
-
-* Número de WhatsApp o SMS
-* Webhook → n8n
-
-### ✔️ Google Gemini
-
-* PaLM API key
-* Modelo conectado a través del nodo LangChain oficial
+* n8n en contenedor
+* Twilio configurado
+* API Key de Gemini
+* Archivo `ParkingUCaldas.json`
 
 ---
 
-# 3. Diagrama de Arquitectura
+## 2️⃣ Importar el workflow
 
-```
-┌─────────────────┐      WhatsApp/SMS        ┌─────────────────────┐
-│     Usuario      │ ──────────────────────▶ │        Twilio        │
-└─────────────────┘                          └──────────┬──────────┘
-                                                       │ Webhook
-                                                       ▼
-                                        ┌────────────────────────────────┐
-                                        │   VPS Hostinger (Ubuntu)       │
-                                        │  Docker + Docker Compose       │
-                                        └───────────┬────────────────────┘
-                                                    │
-                                                    ▼
-                                  ┌────────────────────────────────────┐
-                                  │             n8n Workflow            │
-                                  │  ─ Twilio Trigger                   │
-                                  │  ─ LangChain AI Agent               │
-                                  │  ─ Gemini Chat Model                │
-                                  │  ─ Simple Memory (por sesión)       │
-                                  │  ─ Twilio SendResult                │
-                                  └───────────┬────────────────────────┘
-                                              │
-                                              ▼
-                                ┌───────────────────────────────────────┐
-                                │        Google Gemini (PaLM API)       │
-                                └───────────────────────────────────────┘
-```
-
----
-
-# 4. Diagrama del Flujo Conversacional
-
-```
-Usuario
-   │
-   ▼
-Twilio Trigger (n8n)
-   │ Body, From, To
-   ▼
-AI Agent (Prompt Parking Ucaldas)
-   │ ├─ Usa memoria por número
-   │ └─ Pide datos paso a paso
-   ▼
-Gemini (Genera respuesta)
-   │
-   ▼
-SendResult (Twilio)
-   │
-   ▼
-Usuario recibe respuesta
-```
-
----
-
-# 5. Requisitos Previos
-
-Antes de importar el flujo necesitas:
-
-* VPS Hostinger con Docker instalado
-* n8n corriendo en un contenedor
-* Número de Twilio habilitado
-* API Key de Google Gemini
-* Archivo `ParkingUCaldas.json` (incluido en este repo)
-
----
-
-# 6. Importar el flujo en n8n
-
-1. Abre n8n en tu VPS → `https://tu-dominio.com`
-2. Ve a **Workflows → Import**
-3. Selecciona el archivo `ParkingUCaldas.json`
-4. Activa el workflow
-5. En Twilio configura el webhook de mensajes entrantes con la URL del nodo **Twilio Trigger**
+1. Abrir n8n → `https://tu-dominio.com`
+2. **Workflows → Import**
+3. Cargar `ParkingUCaldas.json`
+4. Activar workflow
+5. Configurar webhook en Twilio con la URL del nodo Trigger
 
 Ejemplo:
 
@@ -166,139 +138,48 @@ https://tudominio.com/webhook/3de7047f-7f7f-40c7-86b6-9891b3a60e59
 
 ---
 
-# 7. Configuración de Credenciales
+# 🧩 Componentes del Workflow
 
-### 7.1 Twilio
+### 🟦 Twilio Trigger
 
-Debe existir una credencial con nombre:
+Recibe Body, From y To.
 
-```
-Twilio account
-```
-
-Contiene:
-
-* Account SID
-* Auth Token
-
-### 7.2 Google Gemini (PaLM)
-
-Credencial usada por:
-
-```
-Gemini Chat Model
-```
-
-Contiene:
-
-* API Key de PaLM / Gemini
-
----
-
-# 8. Detalle de Nodos del Workflow
-
-### ✔️ Twilio Trigger
-
-Recibe mensajes entrantes → pasa Body, From y To al agente.
-
-### ✔️ AI Agent (LangChain)
+### 🟧 LangChain AI Agent
 
 * Prompt completo de Parking Ucaldas
 * Lógica conversacional
-* Maneja reserva, cancelación y validación
-* Se conecta a:
+* Manejo de memoria
+* Reglas del flujo
 
-  * Gemini (modelo)
-  * Simple Memory (contexto)
+### 🟩 Gemini Chat Model
 
-### ✔️ Gemini Chat Model
+Genera texto final.
 
-Genera las respuestas del asistente.
+### 🟨 Simple Memory
 
-### ✔️ Simple Memory
+Memoria por número → persistencia por sesión.
 
-Memoria por número (`sessionKey = From`)
-Contexto de 30 intervenciones.
+### 🟥 Twilio SendResult
 
-### ✔️ SendResult
-
-Envía la respuesta al usuario usando Twilio.
+Envía la respuesta al usuario.
 
 ---
 
-# 9. Flujo Funcional
+# 🛠️ Comandos de Infraestructura
 
-### 9.1 Reserva (Estudiantes)
-
-El bot solicita:
-
-1. Código
-2. Placa
-3. Horario
-4. Sede
-
-Luego asigna:
-
-* Primer puesto libre
-* En sede solicitada
-* Para la franja indicada
-
-Y responde con:
-
-* Sede
-* Puesto asignado
-* Cupos restantes
-* Mensaje amigable con emojis
-
----
-
-### 9.2 Cancelar reserva
-
-Solicita:
-
-* Código
-* Placa
-
-Y devuelve:
-
-* Puesto liberado
-* Sede
-* Mensaje de confirmación
-
----
-
-### 9.3 Validar placa
-
-Solicita:
-
-* Placa del vehículo
-
-Y responde con:
-
-* Si la reserva está activa
-* Sede
-* Horario
-* Código de estudiante
-* Puesto asignado
-* Estado del cupo
-
----
-
-# 10. Infraestructura (Hostinger + Docker)
-
-### Status del contenedor
+Estado del contenedor:
 
 ```
 docker ps
 ```
 
-### Logs del bot
+Ver logs:
 
 ```
 docker logs -f n8n
 ```
 
-### Reinicio rápido
+Reiniciar servicio:
 
 ```
 docker compose down
@@ -307,11 +188,50 @@ docker compose up -d
 
 ---
 
-# 11. Autor / Créditos
+# 🌟 Funcionalidades del Bot
 
-Proyecto creado e implementado por:
+## 🧑‍🎓 1. Reservas
 
-**Gewralds Braook**
-Software Developer(.NET) · IA Enthusiast
-Infraestructura propia → Docker + n8n + Hostinger VPS
+Solicita:
+
+* Código
+* Placa
+* Horario
+* Sede
+
+Asigna automáticamente el **primer puesto disponible**.
+
 ---
+
+## ❌ 2. Cancelar reserva
+
+Solicita:
+
+* Código
+* Placa
+
+Devuelve:
+
+* Puesto liberado
+* Sede
+* Confirmación
+
+---
+
+## 👮 3. Validar placa
+
+Recibe placa y responde con:
+
+* Estado de la reserva
+* Sede
+* Código del estudiante
+* Horario
+* Puesto asignado
+
+---
+
+# 👨‍💻 Autor
+
+**Gewralds Betancourt**
+Software Developer (.NET) · IA Enthusiast
+Infraestructura: Docker + n8n + Twilio + Gemini + Hostinger
